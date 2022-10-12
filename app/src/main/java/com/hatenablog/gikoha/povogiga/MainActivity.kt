@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
@@ -15,20 +16,24 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.*
 import androidx.compose.ui.unit.*
 import com.hatenablog.gikoha.povogiga.ui.theme.PovoGigaTheme
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import retrofit2.Retrofit
+import retrofit2.converter.moshi.MoshiConverterFactory
+import java.util.*
+import java.util.concurrent.TimeUnit
 
 
 class MainActivity : ComponentActivity()
 {
-    private lateinit var viewModel: PovoGigaViewModel
-
     override fun onCreate(savedInstanceState: Bundle?)
     {
         super.onCreate(savedInstanceState)
-        viewModel = PovoGigaViewModel()
-        viewModel.loadData()
-
         setContent {
-            DefaultPreview(viewModel)
+            DefaultPreview()
         }
     }
 }
@@ -61,24 +66,19 @@ fun PovoGigaOneline(
     }
 }
 
-// Provide sample viewModel
-class GigaVMPreviewParameterProvider : PreviewParameterProvider<PovoGigaViewModel>
-{
-    override val values = sequenceOf(
-        PovoGigaViewModel()
-    )
-}
 
 @Preview(name = "MainScreen", showBackground = true)
 @Composable
-fun DefaultPreview(
-    @PreviewParameter(GigaVMPreviewParameterProvider::class) viewModel: PovoGigaViewModel
-)
+fun DefaultPreview()
 {
     val focusManager = LocalFocusManager.current
 
     var giga by remember { mutableStateOf("") }
     var memo by remember { mutableStateOf("") }
+    val items = remember {  mutableStateListOf<PovoGiga>() }
+
+    loadData(items)
+
     PovoGigaTheme {
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -104,8 +104,8 @@ fun DefaultPreview(
                     Button(
                         onClick = {
                             focusManager.clearFocus()
-                            viewModel.postData(giga, memo)
-                            viewModel.loadData()
+                            postData(giga, memo)
+                            loadData(items)
                         },
                         modifier = Modifier.padding(all = 4.dp)
                     ) {
@@ -125,9 +125,9 @@ fun DefaultPreview(
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(viewModel.items.count()) {
-                        PovoGigaOneline(viewModel.items[it])
-                        if (it < viewModel.items.lastIndex)
+                    itemsIndexed(items) { index, item ->
+                        PovoGigaOneline(item)
+                        if (index < items.lastIndex)
                             Divider(color = Color.Gray, thickness = 1.dp)
                     }
 
@@ -137,4 +137,81 @@ fun DefaultPreview(
 
         }
     }
+}
+
+fun loadData(items: SnapshotStateList<PovoGiga>)
+{
+    val getapi = apiBuilder().create(PovoGigaGet::class.java)
+
+    // repo access is suspended function, so run in viewModelScope
+    MainScope().launch {
+        val response = getapi.getItems()
+        if (response.isSuccessful)
+        {
+            val data = response.body()!!
+            items.clear()
+            items.addAll(data)
+        }
+    }
+}
+
+fun postData(data: String, memo: String)
+{
+    val postapi = apiBuilder().create(PovoGigaPost::class.java)
+
+    val d = PovoGigaPostJson(BuildConfig.povoapikey, getDateString(), data, memo)
+
+    // repo access is suspended function, so run in viewModelScope
+    MainScope().launch {
+        val response = postapi.postItem(d)
+        if (response.isSuccessful)
+        {
+            // success
+            // Log.i("PostData", d.toString())
+        }
+    }
+}
+
+// date utility function
+
+private fun getDateString(): String
+{
+    val cal = Calendar.getInstance()
+    val year = cal.get(Calendar.YEAR)
+    val month = cal.get(Calendar.MONTH) + 1
+    val day = cal.get(Calendar.DAY_OF_MONTH)
+    val hour = cal.get(Calendar.HOUR_OF_DAY)
+    val minute = cal.get(Calendar.MINUTE)
+
+    return String.format("%04d%02d%02d %02d%02d", year, month, day, hour, minute)
+}
+
+
+// api builder utility function for retrofit
+
+private fun apiBuilder(): Retrofit
+{
+    // access API
+    val client = buildOkHttp()
+
+    val moshi = Moshi.Builder()
+        .add(KotlinJsonAdapterFactory())
+        .build()
+
+    return Retrofit.Builder()
+        .baseUrl(BuildConfig.povoserverurl)
+        .client(client)
+        .addConverterFactory(MoshiConverterFactory.create(moshi))
+        .build()
+}
+
+// okhttp build utility function
+
+private fun buildOkHttp(): OkHttpClient
+{
+    val client = OkHttpClient.Builder()
+    client.connectTimeout(20, TimeUnit.SECONDS)
+    client.readTimeout(15, TimeUnit.SECONDS)
+    client.writeTimeout(15, TimeUnit.SECONDS)
+    return client.build()
 }

@@ -24,3 +24,6 @@ povogetapi=get?apikey=THEKEY
 povoapikey=THEKEY
 ```
 - kotlin ソース内で参照してます
+
+### 変更点
+- viewModelを削除
