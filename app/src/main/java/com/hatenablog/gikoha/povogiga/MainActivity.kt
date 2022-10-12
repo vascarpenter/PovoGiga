@@ -76,8 +76,10 @@ fun DefaultPreview()
     var giga by remember { mutableStateOf("") }
     var memo by remember { mutableStateOf("") }
     val items = remember {  mutableStateListOf<PovoGiga>() }
+    var itemskey = listOf<UUID>()
 
     loadData(items)
+    itemskey = List(items.count()) { UUID.randomUUID() } // List全体を書き換えるためてきとーなkeyを設定
 
     PovoGigaTheme {
         Surface(
@@ -106,6 +108,8 @@ fun DefaultPreview()
                             focusManager.clearFocus()
                             postData(giga, memo)
                             loadData(items)
+                            itemskey = List(items.count()) { UUID.randomUUID() }  // keyをすべて変更しList全体を書き換える
+
                         },
                         modifier = Modifier.padding(all = 4.dp)
                     ) {
@@ -125,10 +129,10 @@ fun DefaultPreview()
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    itemsIndexed(items) { index, item ->
-                        PovoGigaOneline(item)
-                        if (index < items.lastIndex)
-                            Divider(color = Color.Gray, thickness = 1.dp)
+                    items(items.count(), key = { ind -> itemskey[ind] })
+                    {
+                        PovoGigaOneline(items[it])
+                        Divider(color = Color.Gray, thickness = 1.dp)
                     }
 
                 }
