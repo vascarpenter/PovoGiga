@@ -26,4 +26,4 @@ povoapikey=THEKEY
 - kotlin ソース内で参照してます
 
 ### 変更点
-- viewModelを削除
+- HiltとviewModel Kotlin flowで書き直し

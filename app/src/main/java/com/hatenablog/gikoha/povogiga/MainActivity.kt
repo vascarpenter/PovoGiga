@@ -4,53 +4,46 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
-import androidx.compose.ui.*
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.*
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.*
 import com.hatenablog.gikoha.povogiga.ui.theme.PovoGigaTheme
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import kotlinx.coroutines.MainScope
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
 import java.util.*
-import java.util.concurrent.TimeUnit
 
-
+@AndroidEntryPoint
 class MainActivity : ComponentActivity()
 {
     override fun onCreate(savedInstanceState: Bundle?)
     {
         super.onCreate(savedInstanceState)
         setContent {
-            DefaultPreview()
+            MainScreen()
         }
     }
 }
 
-// Provide sample data for preview
-class GigaPreviewParameterProvider : PreviewParameterProvider<PovoGiga>
-{
-    override val values = sequenceOf(
-        PovoGiga("2022/10/9", "50.20", "memo"),
-    )
-}
 
 // Create one line row in Compose LazyColumn
-@Preview(name="oneline")
 @Composable
-fun PovoGigaOneline(
-    @PreviewParameter(GigaPreviewParameterProvider::class) data: PovoGiga)
+fun PovoGigaOneline(data: PovoGiga)
 {
     Column {
         Row {
@@ -66,20 +59,66 @@ fun PovoGigaOneline(
     }
 }
 
-
-@Preview(name = "MainScreen", showBackground = true)
 @Composable
-fun DefaultPreview()
+fun MainScreen()
 {
     val focusManager = LocalFocusManager.current
 
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+
+    val viewModel: PovoGigaViewModel = hiltViewModel()
+
+    val buttontitle by viewModel.buttontitle.observeAsState()
+
+    val viewState: PovoGigaViewState by viewModel.state.collectAsState(initial = PovoGigaViewState.EMPTY)
+    val items: List<PovoGiga> = viewState.items ?: emptyList()
+
+    if (items.isEmpty())
+    {
+        viewModel.loadData {
+            coroutineScope.launch {
+                // Animate scroll to the end of item
+
+                listState.animateScrollToItem(viewState.items?.count() ?: 0)
+            }
+        }
+    }
+
+    PovoGigaMainScreen(items, buttontitle) { temp, memo ->
+        focusManager.clearFocus()
+        viewModel.postData(temp, memo)
+        {
+            viewModel.changeTitle("POST OK")
+            viewModel.clearData()
+            // 削除すると recompose 行われ、loadData が行われ、再度 recomposeされることで recompose保証
+            // updateだけでは recomposeすら行われない「ことがある」
+        }
+    }
+
+}
+
+// Provide sample data for preview
+class PGMainScreenParameterProvider : PreviewParameterProvider<List<PovoGiga>>
+{
+    override val values = sequenceOf(
+        listOf(
+            PovoGiga("22-10-9", "75.0", "やと　ぎが　かえた　も　とてもかゆい"),
+            PovoGiga("22-10-15", "74.0", "かゆい　かゆい　ぎがかつ　きた")
+        ),
+    )
+}
+
+@Preview(name = "MainScreen")
+@Composable
+fun PovoGigaMainScreen(
+    @PreviewParameter(PGMainScreenParameterProvider::class) items: List<PovoGiga>,
+    buttontitle: String? = "SUBMIT",
+    onClick: (temp: String, memo: String) -> Unit = { _, _ -> },
+)
+{
     var giga by remember { mutableStateOf("") }
     var memo by remember { mutableStateOf("") }
-    val items = remember {  mutableStateListOf<PovoGiga>() }
-    var itemskey = listOf<UUID>()
-
-    loadData(items)
-    itemskey = List(items.count()) { UUID.randomUUID() } // List全体を書き換えるためてきとーなkeyを設定
 
     PovoGigaTheme {
         Surface(
@@ -105,15 +144,15 @@ fun DefaultPreview()
 
                     Button(
                         onClick = {
-                            focusManager.clearFocus()
-                            postData(giga, memo)
-                            loadData(items)
-                            itemskey = List(items.count()) { UUID.randomUUID() }  // keyをすべて変更しList全体を書き換える
-
+                            onClick(giga, memo)
                         },
                         modifier = Modifier.padding(all = 4.dp)
                     ) {
-                        Text("Submit")
+                        Text(
+                            text = buttontitle ?: "",
+                            fontSize = 10.sp,
+                            maxLines = 1,
+                        )
                     }
                 }
 
@@ -121,101 +160,29 @@ fun DefaultPreview()
                     value = memo,
                     onValueChange = { memo = it },
                     label = { Text("memo") },
-                    modifier = Modifier.padding(all = 4.dp),
+                    modifier = Modifier.padding(all = 4.dp).fillMaxWidth(),
                     maxLines = 1,
                     singleLine = true,
                 )
 
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(items.count(), key = { ind -> itemskey[ind] })
-                    {
-                        PovoGigaOneline(items[it])
-                        Divider(color = Color.Gray, thickness = 1.dp)
-                    }
-
-                }
+                PovoLists(items)
             }
 
 
         }
     }
 }
-
-fun loadData(items: SnapshotStateList<PovoGiga>)
+@Composable
+fun PovoLists(items: List<PovoGiga>)
 {
-    val getapi = apiBuilder().create(PovoGigaGet::class.java)
 
-    // repo access is suspended function, so run in viewModelScope
-    MainScope().launch {
-        val response = getapi.getItems()
-        if (response.isSuccessful)
-        {
-            val data = response.body()!!
-            items.clear()
-            items.addAll(data)
+    LazyColumn(
+    verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        itemsIndexed(items) { _, item ->
+            PovoGigaOneline(item)
+            Divider(color = Color.Gray, thickness = 1.dp)
         }
     }
-}
 
-fun postData(data: String, memo: String)
-{
-    val postapi = apiBuilder().create(PovoGigaPost::class.java)
-
-    val d = PovoGigaPostJson(BuildConfig.povoapikey, getDateString(), data, memo)
-
-    // repo access is suspended function, so run in viewModelScope
-    MainScope().launch {
-        val response = postapi.postItem(d)
-        if (response.isSuccessful)
-        {
-            // success
-            // Log.i("PostData", d.toString())
-        }
-    }
-}
-
-// date utility function
-
-private fun getDateString(): String
-{
-    val cal = Calendar.getInstance()
-    val year = cal.get(Calendar.YEAR)
-    val month = cal.get(Calendar.MONTH) + 1
-    val day = cal.get(Calendar.DAY_OF_MONTH)
-    val hour = cal.get(Calendar.HOUR_OF_DAY)
-    val minute = cal.get(Calendar.MINUTE)
-
-    return String.format("%04d%02d%02d %02d%02d", year, month, day, hour, minute)
-}
-
-
-// api builder utility function for retrofit
-
-private fun apiBuilder(): Retrofit
-{
-    // access API
-    val client = buildOkHttp()
-
-    val moshi = Moshi.Builder()
-        .add(KotlinJsonAdapterFactory())
-        .build()
-
-    return Retrofit.Builder()
-        .baseUrl(BuildConfig.povoserverurl)
-        .client(client)
-        .addConverterFactory(MoshiConverterFactory.create(moshi))
-        .build()
-}
-
-// okhttp build utility function
-
-private fun buildOkHttp(): OkHttpClient
-{
-    val client = OkHttpClient.Builder()
-    client.connectTimeout(20, TimeUnit.SECONDS)
-    client.readTimeout(15, TimeUnit.SECONDS)
-    client.writeTimeout(15, TimeUnit.SECONDS)
-    return client.build()
 }

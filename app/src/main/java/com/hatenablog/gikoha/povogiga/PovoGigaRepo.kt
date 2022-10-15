@@ -1,5 +1,6 @@
 package com.hatenablog.gikoha.povogiga
 
+import androidx.compose.runtime.Stable
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -7,6 +8,7 @@ import retrofit2.http.POST
 
 // API GET
 
+@Stable
 data class PovoGiga(
     val date: String,
     val gigaleft: String,
@@ -20,7 +22,7 @@ interface PovoGigaGet
 }
 
 // API POST
-
+@Stable
 data class PovoGigaPostJson(
     val apikey: String,
     val date: String,
