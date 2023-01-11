@@ -14,10 +14,12 @@
         <entry key="../../../../layout/compose-model-1665381035673.xml" value="0.45" />
         <entry key="../../../../layout/compose-model-1665391570273.xml" value="0.25134926754047804" />
         <entry key="../../../../layout/compose-model-1665842389652.xml" value="0.45" />
+        <entry key="../../../../layout/compose-model-1665886630912.xml" value="0.2936708860759494" />
+        <entry key="../../../../layout/compose-model-1665922937405.xml" value="0.2939189189189189" />
       </map>
     </option>
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_17_PREVIEW" project-jdk-name="jbr-11" project-jdk-type="JavaSDK">
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_17_PREVIEW" project-jdk-name="Android API 32 Platform" project-jdk-type="Android SDK">
     <output url="file://$PROJECT_DIR$/build/classes" />
   </component>
   <component name="ProjectType">

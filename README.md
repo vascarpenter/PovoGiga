@@ -2,7 +2,6 @@
 
 https://github.com/vascarpenter/PovoGiga
 - PovoGigaPost の Jetpack Compose / retrofit2 で書き直した版
-  - 当然こちらのほうがわかりやすいしコード量も少ない
 
 ### 問題点
 
@@ -13,7 +12,7 @@ https://github.com/vascarpenter/PovoGiga
 
 ### このandroidアプリをコンパイルする前に
 
-- build.gradle :app から ３つの文字列を参照しているので
+- build.gradle :app から 4つの文字列を参照しているので
 - `~/.gradle/gradle.properties` に追加しておく
 ```
 # 自分のサイトにあった設定に差し替えてね
@@ -27,3 +26,4 @@ povoapikey=THEKEY
 
 ### 変更点
 - HiltとviewModel Kotlin flowで書き直し
+- letsencryptx3(Let's Encrypt Authority X3)がRetireしたため Let’s Encrypt R3に変更した

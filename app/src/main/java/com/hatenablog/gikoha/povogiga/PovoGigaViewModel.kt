@@ -1,5 +1,6 @@
 package com.hatenablog.gikoha.povogiga
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -46,14 +47,25 @@ class PovoGigaViewModel @Inject constructor() : ViewModel()
         // repo access is suspended function, so run in CoroutineScope
 
         viewModelScope.launch {
-            val response = getapi.getItems()
-            if (response.isSuccessful)
-            {
-                // success
-                val data = response.body()!!
-                _items.update { data.toList() }
-                callback()
+            try {
+                val response = getapi.getItems()
+                if (response.isSuccessful)
+                {
+                    // success
+                    val data = response.body()!!
+                    _items.update { data.toList() }
+                    callback()
+                }
+                else
+                {
+                    Log.e("Error", response.errorBody().toString())
+                }
             }
+            catch (e: Exception)
+            {
+                Log.e("Error", "connect error "+ e.message)
+            }
+
         }
 
     }
@@ -66,13 +78,25 @@ class PovoGigaViewModel @Inject constructor() : ViewModel()
 
         viewModelScope.launch {
 
+            try {
             // repo access is suspended function, so run in CoroutineScope
-            val response = postapi.postItem(d)
-            if (response.isSuccessful)
-            {
-                // success
-                callback()
+                val response = postapi.postItem(d)
+                if (response.isSuccessful)
+                {
+                    // success
+                    callback()
+                }
+                else
+                {
+                    Log.e("Error", response.errorBody().toString())
+                }
+
             }
+            catch (e: Exception)
+            {
+                Log.e("Error", "connect error "+ e.message)
+            }
+
         }
     }
 

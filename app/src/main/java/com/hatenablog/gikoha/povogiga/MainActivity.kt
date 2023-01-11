@@ -6,7 +6,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -25,7 +24,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.*
 import com.hatenablog.gikoha.povogiga.ui.theme.PovoGigaTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 import java.util.*
 
 @AndroidEntryPoint
@@ -64,9 +62,6 @@ fun MainScreen()
 {
     val focusManager = LocalFocusManager.current
 
-    val listState = rememberLazyListState()
-    val coroutineScope = rememberCoroutineScope()
-
     val viewModel: PovoGigaViewModel = hiltViewModel()
 
     val buttontitle by viewModel.buttontitle.observeAsState()
@@ -77,11 +72,8 @@ fun MainScreen()
     if (items.isEmpty())
     {
         viewModel.loadData {
-            coroutineScope.launch {
-                // Animate scroll to the end of item
-
-                listState.animateScrollToItem(viewState.items?.count() ?: 0)
-            }
+            // scroll不要
+            //viewModel.changeTitle("SUBMIT")  // replace to initial value
         }
     }
 
@@ -175,14 +167,12 @@ fun PovoGigaMainScreen(
 @Composable
 fun PovoLists(items: List<PovoGiga>)
 {
-
     LazyColumn(
-    verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         itemsIndexed(items) { _, item ->
             PovoGigaOneline(item)
             Divider(color = Color.Gray, thickness = 1.dp)
         }
     }
-
 }
