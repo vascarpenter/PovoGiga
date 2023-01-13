@@ -1,5 +1,6 @@
 package com.hatenablog.gikoha.povogiga
 
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,6 +14,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -68,6 +70,9 @@ fun MainScreen()
 
     val viewState: PovoGigaViewState by viewModel.state.collectAsState(initial = PovoGigaViewState.EMPTY)
     val items: List<PovoGiga> = viewState.items ?: emptyList()
+    val showDialog by viewModel.showDialog.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val activity = (LocalContext.current as? Activity)
 
     if (items.isEmpty())
     {
@@ -88,6 +93,23 @@ fun MainScreen()
         }
     }
 
+    if(showDialog)
+    {
+        AlertDialog(
+            onDismissRequest = { },
+            title = {
+                Text("Error " + errorMessage)
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.closeAlert()
+                    activity?.finishAndRemoveTask()
+                }) {
+                    Text("Exit")
+                }
+            }
+        )
+    }
 }
 
 // Provide sample data for preview
