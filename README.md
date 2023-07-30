@@ -27,3 +27,7 @@ povoapikey=THEKEY
 ### 変更点
 - HiltとviewModel Kotlin flowで書き直し
 - letsencryptx3(Let's Encrypt Authority X3)がRetireしたため Let’s Encrypt R3に変更した
+- Chain Validation Failedエラーのときは、letsencryptの問題か、自前のサーバのcertbotがrenewしてなかったか、
+  あるいはrenewしていたのにそのpemを使っているAPIサーバの再立ち上げ直しをしていなかったか。
+- https アクセスがネームサーバーの問題でできなくなったので　http接続でAPIアクセスするようにした
+  (AndroidManifest.xml と xml/network_security_config.xml を変更)
